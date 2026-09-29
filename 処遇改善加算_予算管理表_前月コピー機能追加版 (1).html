@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>処遇改善加算 予算管理表</title>
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="512x512" href="favicon.png">
+<style>
+  :root{
+    --blue:#1f5f9b;
+    --light-blue:#eaf3fb;
+    --border:#c9d6e2;
+    --green:#eaf7ee;
+    --red:#fff0f0;
+    --gray:#f5f7f9;
+    --text:#24313d;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:"Yu Gothic","Meiryo",sans-serif;
+    background:#f3f6f9;
+    color:var(--text);
+  }
+  .container{
+    max-width:1600px;
+    margin:0 auto;
+    padding:24px;
+  }
+  h1{
+    margin:0 0 8px;
+    color:var(--blue);
+    font-size:28px;
+  }
+  .subtitle{
+    margin-bottom:20px;
+    color:#5f6f7c;
+  }
+  .panel{
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:18px;
+    margin-bottom:18px;
+    box-shadow:0 2px 8px rgba(0,0,0,.04);
+  }
+  .panel h2{
+    margin:0 0 14px;
+    color:var(--blue);
+    font-size:20px;
+  }
+  .controls{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    align-items:center;
+  }
+  button{
+    border:none;
+    border-radius:6px;
+    padding:10px 14px;
+    font-weight:bold;
+    cursor:pointer;
+  }
+  .primary{background:var(--blue);color:#fff}
+  .secondary{background:#e7edf3;color:#24313d}
+  .danger{background:#c0392b;color:#fff}
+  .success{background:#2e7d32;color:#fff}
+  input, select{
+    width:100%;
+    padding:7px 8px;
+    border:1px solid #b9c6d2;
+    border-radius:4px;
+    background:#fff;
+    font-size:14px;
+  }
+  input[type="number"]{
+    text-align:right;
+  }
+  .small-input{width:120px}
+  .table-wrap{
+    overflow-x:auto;
+  }
+  table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:1150px;
+  }
+  th,td{
+    border:1px solid var(--border);
+    padding:7px;
+    text-align:center;
+    vertical-align:middle;
+  }
+  th{
+    background:var(--blue);
+    color:#fff;
+    white-space:nowrap;
+  }
+  .subhead th{
+    background:#4d7fae;
+  }
+  td.label{
+    text-align:left;
+    font-weight:bold;
+    background:#f7fafc;
+    white-space:nowrap;
+  }
+  .money{
+    text-align:right;
+    font-variant-numeric:tabular-nums;
+    white-space:nowrap;
+  }
+  .total-row td{
+    background:var(--light-blue);
+    font-weight:bold;
+  }
+  .positive{background:var(--green)!important;color:#156b2f}
+  .negative{background:var(--red)!important;color:#b42318}
+  .summary-grid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(180px,1fr));
+    gap:12px;
+  }
+  .card{
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:14px;
+    background:#fff;
+  }
+  .card .title{
+    color:#5f6f7c;
+    font-size:13px;
+    margin-bottom:6px;
+  }
+  .card .value{
+    color:var(--blue);
+    font-size:24px;
+    font-weight:bold;
+    text-align:right;
+  }
+  .note{
+    font-size:13px;
+    color:#657582;
+    line-height:1.7;
+  }
+  .service-vn{background:#eef7ff}
+  .service-care{background:#f4f0ff}
+  .service-round{background:#eefaf2}
+  .service-baseup{background:#fff8e8}
+  #employeeBody tr{cursor:grab}
+  #employeeBody tr.dragging{opacity:.45}
+  #employeeBody tr.drag-over{outline:3px solid #1f5f9b;outline-offset:-3px}
+  .move-buttons{display:flex;gap:4px;justify-content:center;align-items:center}
+  .move-btn{padding:6px 9px;background:#e7edf3;color:#24313d}
+  @media(max-width:900px){
+    .summary-grid{grid-template-columns:repeat(2,1fr)}
+  }
+  @media print{
+    body{background:#fff}
+    .no-print{display:none!important}
+    .container{max-width:none;padding:0}
+    .panel{box-shadow:none;break-inside:avoid}
+  }
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button{
+  -webkit-appearance:none;
+  margin:0;
+}
+input[type="number"]{
+  -moz-appearance:textfield;
+  appearance:textfield;
+}
+
+
+  .money-entry{
+    text-align:right;
+    font-variant-numeric:tabular-nums;
+  }
+
+
+#employeeTable th:first-child,
+#employeeTable td:first-child{
+  min-width:180px;
+}
+.emp-name{
+  width:170px !important;
+  min-width:170px;
+}
+
+
+/* 本人支給額を上段6か月・下段6か月で表示 */
+#employeeTable{
+  min-width:1080px;
+  table-layout:fixed;
+}
+#employeeTable th:nth-child(1),
+#employeeTable td:nth-child(1){
+  width:100px;
+  min-width:100px;
+}
+#employeeTable th:nth-child(2),
+#employeeTable td:nth-child(2){
+  width:125px;
+}
+#employeeTable th:nth-child(3),
+#employeeTable td:nth-child(3){
+  width:105px;
+}
+#employeeTable th:nth-child(4),
+#employeeTable td:nth-child(4){
+  width:570px;
+}
+#employeeTable th:nth-child(5),
+#employeeTable td:nth-child(5),
+#employeeTable th:nth-child(6),
+#employeeTable td:nth-child(6),
+#employeeTable th:nth-child(7),
+#employeeTable td:nth-child(7){
+  width:95px;
+}
+#employeeTable th:nth-child(8),
+#employeeTable td:nth-child(8){
+  width:140px;
+}
+.emp-name{
+  width:92px !important;
+  min-width:92px !important;
+}
+.monthly-support-cell{
+  padding:5px !important;
+}
+.monthly-support-grid{
+  display:grid;
+  grid-template-columns:repeat(6,minmax(86px,1fr));
+  gap:4px;
+}
+.monthly-support-item{
+  display:grid;
+  grid-template-columns:30px minmax(0,1fr);
+  gap:3px;
+  align-items:center;
+  padding:3px;
+  border:1px solid #d4dee7;
+  border-radius:4px;
+  background:#fff;
+}
+.monthly-support-item .month-label{
+  font-size:11px;
+  font-weight:bold;
+  color:#36566f;
+  white-space:nowrap;
+}
+.salary-input{
+  width:100% !important;
+  min-width:0 !important;
+  padding:5px 4px;
+  font-size:12px;
+  text-align:right;
+}
+.table-wrap{
+  overflow-x:auto;
+  overflow-y:hidden;
+  scrollbar-gutter:stable;
+}
+.table-wrap::-webkit-scrollbar{
+  height:12px;
+}
+.table-wrap::-webkit-scrollbar-thumb{
+  background:#9fb6c9;
+  border-radius:6px;
+}
+.table-wrap::-webkit-scrollbar-track{
+  background:#edf3f8;
+}
+
+/* 印刷時はA4縦向き。必要に応じて複数ページに分割 */
+@page{
+  size:A4 portrait;
+  margin:8mm;
+}
+@media print{
+  body{
+    background:#fff;
+  }
+  .container{
+    max-width:none;
+    padding:0;
+  }
+  .panel{
+    box-shadow:none;
+    margin-bottom:6mm;
+    break-inside:auto;
+    page-break-inside:auto;
+  }
+  .table-wrap{
+    overflow:visible !important;
+  }
+  #employeeTable{
+    width:100%;
+    min-width:0 !important;
+    table-layout:fixed;
+  }
+  #employeeTable th,
+  #employeeTable td{
+    font-size:8px;
+    padding:2px;
+  }
+  #employeeTable th:nth-child(1),
+  #employeeTable td:nth-child(1){width:9%;}
+  #employeeTable th:nth-child(2),
+  #employeeTable td:nth-child(2){width:11%;}
+  #employeeTable th:nth-child(3),
+  #employeeTable td:nth-child(3){width:10%;}
+  #employeeTable th:nth-child(4),
+  #employeeTable td:nth-child(4){width:46%;}
+  #employeeTable th:nth-child(5),
+  #employeeTable td:nth-child(5),
+  #employeeTable th:nth-child(6),
+  #employeeTable td:nth-child(6),
+  #employeeTable th:nth-child(7),
+  #employeeTable td:nth-child(7){width:8%;}
+  .emp-name{
+    width:100% !important;
+    min-width:0 !important;
+  }
+  .monthly-support-grid{
+    grid-template-columns:repeat(6,minmax(0,1fr));
+    gap:2px;
+  }
+  .monthly-support-item{
+    grid-template-columns:22px minmax(0,1fr);
+    gap:1px;
+    padding:1px;
+  }
+  .monthly-support-item .month-label{
+    font-size:7px;
+  }
+  .salary-input{
+    font-size:7px;
+    padding:2px 1px;
+  }
+  #employeeTable thead{
+    display:table-header-group;
+  }
+  #employeeTable tfoot{
+    display:table-footer-group;
+  }
+  #employeeTable tr{
+    break-inside:avoid;
+    page-break-inside:avoid;
+  }
+}
+
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>処遇改善加算 予算管理表</h1>
+  <div class="subtitle">訪問看護・居宅介護支援・定期巡回・ベースアップ評価料｜加算取得額・職員配分・法定福利費・差額管理</div>
+
+  <div class="panel no-print">
+    <h2>基本設定</h2>
+    <div class="controls">
+      <label>対象年度
+        <input id="year" class="small-input" type="number" value="2026">
+      </label>
+      <label>法定福利費率
+        <input id="benefitRate" class="small-input" type="number" step="0.1" value="16.5">
+      </label>
+      <button class="primary" onclick="addEmployee()">職員を追加</button>
+      <button class="success" onclick="saveData()">保存</button>
+      <button class="secondary" onclick="loadData()">保存データ読込</button>
+      <button class="secondary" onclick="exportCSV()">CSV出力</button>
+      <button class="secondary" onclick="window.print()">印刷</button>
+      <button class="danger" onclick="resetAll()">全データ初期化</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>1．サービス別 加算取得予算</h2>
+    <div class="table-wrap">
+      <table id="incomeTable">
+        <thead>
+          <tr>
+            <th>サービス</th>
+            <th>4月</th><th>5月</th><th>6月</th><th>7月</th><th>8月</th><th>9月</th>
+            <th>10月</th><th>11月</th><th>12月</th><th>1月</th><th>2月</th><th>3月</th>
+            <th>年間合計</th>
+          </tr>
+        </thead>
+        <tbody id="incomeBody"></tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td class="label">全サービス合計</td>
+            <td colspan="12"></td>
+            <td id="grandIncome" class="money">0円</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>2．職員別・各月の配分額</h2>
+    <div class="controls no-print" style="margin-bottom:10px;">
+      <label>コピー先の月
+        <select id="copyTargetMonth" class="small-input">
+          <option value="1">5月</option><option value="2">6月</option><option value="3">7月</option>
+          <option value="4">8月</option><option value="5">9月</option><option value="6">10月</option>
+          <option value="7">11月</option><option value="8">12月</option><option value="9">1月</option>
+          <option value="10">2月</option><option value="11">3月</option>
+        </select>
+      </label>
+      <button class="secondary" type="button" onclick="copyPreviousMonth()">本人支給額：前月をコピー</button>
+      <span class="note">選択した月へ、全職員の前月支給額をコピーします。</span>
+    </div>
+    <div class="table-wrap">
+      <table id="employeeTable">
+        <thead>
+          <tr>
+            <th>職員名</th>
+            <th>所属サービス</th>
+            <th>職員区分</th>
+            <th>本人への支給額<br><small>上段：4月～9月／下段：10月～3月</small></th>
+            <th>年間支給額</th>
+            <th>法定福利費<br><span id="rateLabel">16.5%</span></th>
+            <th>総支給コスト</th>
+            <th class="no-print">操作<br><small>ドラッグ可</small></th>
+          </tr>
+        </thead>
+        <tbody id="employeeBody"></tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td colspan="3" class="label">職員配分合計</td>
+            <td></td>
+            <td id="totalSalary" class="money">0円</td>
+            <td id="totalBenefits" class="money">0円</td>
+            <td id="totalCost" class="money">0円</td>
+            <td class="no-print"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>3．サービス別 収支差額</h2>
+    <div class="table-wrap">
+      <table id="differenceTable">
+        <thead>
+          <tr>
+            <th>サービス</th>
+            <th>加算取得額</th>
+            <th>本人支給額</th>
+            <th>法定福利費</th>
+            <th>総支給コスト</th>
+            <th>実績報告額</th>
+            <th>差額</th>
+            <th>消化率</th>
+          </tr>
+        </thead>
+        <tbody id="differenceBody"></tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td class="label">全サービス合計</td>
+            <td id="diffIncome" class="money">0円</td>
+            <td id="diffSalary" class="money">0円</td>
+            <td id="diffBenefits" class="money">0円</td>
+            <td id="diffCost" class="money">0円</td>
+            <td id="diffActualReport" class="money">0円</td>
+            <td id="diffBalance" class="money">0円</td>
+            <td id="diffRate">0.0%</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>4．年間サマリー</h2>
+    <div class="summary-grid">
+      <div class="card"><div class="title">年間加算取得額</div><div id="sumIncome" class="value">0円</div></div>
+      <div class="card"><div class="title">年間本人支給額</div><div id="sumSalary" class="value">0円</div></div>
+      <div class="card"><div class="title">年間法定福利費</div><div id="sumBenefits" class="value">0円</div></div>
+      <div class="card"><div class="title">年間実績報告額</div><div id="sumActualReport" class="value">0円</div></div>
+      <div class="card"><div class="title">総支給コスト－実績報告額</div><div id="sumCostMinusActual" class="value">0円</div></div>
+      <div class="card"><div class="title">年間差額</div><div id="sumBalance" class="value">0円</div></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>計算方法</h2>
+    <div class="note">
+      ・法定福利費 ＝ 本人への支給額 × 法定福利費率<br>
+      ・総支給コスト ＝ 本人への支給額 ＋ 法定福利費<br>
+      ・差額 ＝ 加算取得額 － 総支給コスト<br>
+      ・消化率 ＝ 総支給コスト ÷ 加算取得額 × 100<br>
+      ※実際の処遇改善加算の配分対象、法定福利費への充当可否、対象職種、報告方法は各制度の算定要件・実績報告要領に沿って確認してください。
+    </div>
+  </div>
+</div>
+
+<script>
+const months = ["4月","5月","6月","7月","8月","9月","10月","11月","12月","1月","2月","3月"];
+const services = [
+  {key:"訪問看護", cls:"service-vn"},
+  {key:"居宅介護支援", cls:"service-care"},
+  {key:"定期巡回", cls:"service-round"},
+  {key:"ベースアップ評価料", cls:"service-baseup"}
+];
+
+const employeeTypes = [
+  "介護職員",
+  "看護職員",
+  "リハビリ職",
+  "介護支援専門員",
+  "事務員",
+  "その他"
+];
+
+const actualReportByService = {
+  "訪問看護": 0,
+  "居宅介護支援": 0,
+  "定期巡回": 0,
+  "ベースアップ評価料": 0
+};
+
+function parseAmount(value){
+  return Number(String(value ?? "").replace(/,/g,"").replace(/[^0-9.-]/g,"")) || 0;
+}
+
+function formatAmount(value){
+  const number = parseAmount(value);
+  return number ? number.toLocaleString("ja-JP") : "";
+}
+
+function handleMoneyInput(input){
+  const start = input.selectionStart ?? input.value.length;
+  const before = input.value;
+  const digitsBeforeCursor = before.slice(0,start).replace(/\D/g,"").length;
+  const digits = before.replace(/\D/g,"");
+
+  input.value = digits ? Number(digits).toLocaleString("ja-JP") : "";
+
+  let cursor = 0;
+  let seen = 0;
+  while(cursor < input.value.length && seen < digitsBeforeCursor){
+    if(/\d/.test(input.value[cursor])) seen++;
+    cursor++;
+  }
+  input.setSelectionRange(cursor,cursor);
+  recalculate();
+}
+
+function updateActualReport(input){
+  const start = input.selectionStart ?? input.value.length;
+  const before = input.value;
+  const digitsBeforeCursor = before.slice(0,start).replace(/\D/g,"").length;
+  const digits = before.replace(/\D/g,"");
+
+  input.value = digits ? Number(digits).toLocaleString("ja-JP") : "";
+  actualReportByService[input.dataset.service] = parseAmount(input.value);
+
+  let cursor = 0;
+  let seen = 0;
+  while(cursor < input.value.length && seen < digitsBeforeCursor){
+    if(/\d/.test(input.value[cursor])) seen++;
+    cursor++;
+  }
+  input.setSelectionRange(cursor,cursor);
+  refreshActualReportTotals();
+}
+
+function refreshActualReportTotals(){
+  const totalActualReport = services.reduce((sum,s)=>sum + parseAmount(actualReportByService[s.key]),0);
+  const totalCost = Array.from(document.querySelectorAll("#employeeBody tr")).reduce((sum,tr)=>{
+    return sum + parseAmount(tr.querySelector(".emp-cost-total")?.textContent);
+  },0);
+  const costMinusActual = totalCost - totalActualReport;
+
+  const diffActual = document.getElementById("diffActualReport");
+  const sumActual = document.getElementById("sumActualReport");
+  const sumCostMinus = document.getElementById("sumCostMinusActual");
+
+  if(diffActual) diffActual.textContent = yen(totalActualReport);
+  if(sumActual) sumActual.textContent = yen(totalActualReport);
+  if(sumCostMinus){
+    sumCostMinus.textContent = yen(costMinusActual);
+    sumCostMinus.style.color = costMinusActual>=0 ? "#b42318" : "#156b2f";
+  }
+}
+
+
+function yen(v){
+  return Math.round(Number(v)||0).toLocaleString("ja-JP") + "円";
+}
+
+function buildIncomeTable(){
+  const tbody = document.getElementById("incomeBody");
+  tbody.innerHTML = "";
+  services.forEach((s,si)=>{
+    const tr = document.createElement("tr");
+    tr.className = s.cls;
+    let cells = `<td class="label">${s.key}</td>`;
+    months.forEach((m,mi)=>{
+      cells += `<td><input type="text" inputmode="numeric" value="0"
+        class="income-input money-entry" data-service="${s.key}" data-month="${mi}"
+        oninput="handleMoneyInput(this)"></td>`;
+    });
+    cells += `<td id="income-total-${si}" class="money">0円</td>`;
+    tr.innerHTML = cells;
+    tbody.appendChild(tr);
+  });
+}
+
+function addEmployee(data=null){
+  const tbody = document.getElementById("employeeBody");
+  const tr = document.createElement("tr");
+  const id = "emp_" + Date.now() + "_" + Math.floor(Math.random()*10000);
+  tr.dataset.id = id;
+  tr.draggable = true;
+
+  let monthInputs = `<td class="monthly-support-cell"><div class="monthly-support-grid">`;
+  months.forEach((m,mi)=>{
+    const val = data?.months?.[mi] ?? 0;
+    monthInputs += `
+      <label class="monthly-support-item">
+        <span class="month-label">${m}</span>
+        <input type="text" inputmode="numeric" value="${formatAmount(val)}"
+          class="salary-input money-entry" data-month="${mi}" oninput="handleMoneyInput(this)">
+      </label>`;
+  });
+  monthInputs += `</div></td>`;
+
+  tr.innerHTML = `
+    <td><input type="text" class="emp-name" value="${data?.name ?? ""}" placeholder="職員名"></td>
+    <td>
+      <select class="emp-service" onchange="recalculate()">
+        ${services.map(s=>`<option value="${s.key}" ${data?.service===s.key?"selected":""}>${s.key}</option>`).join("")}
+      </select>
+    </td>
+    <td>
+      <select class="emp-type">
+        ${employeeTypes.map(t=>`<option value="${t}" ${(data?.type ?? "介護職員")===t?"selected":""}>${t}</option>`).join("")}
+      </select>
+    </td>
+    ${monthInputs}
+    <td class="money emp-salary-total">0円</td>
+    <td class="money emp-benefit-total">0円</td>
+    <td class="money emp-cost-total">0円</td>
+    <td class="no-print">
+      <div class="move-buttons">
+        <button class="move-btn" type="button" onclick="moveEmployee(this,-1)" title="上へ移動">↑</button>
+        <button class="move-btn" type="button" onclick="moveEmployee(this,1)" title="下へ移動">↓</button>
+        <button class="danger" type="button" onclick="removeEmployee(this)">削除</button>
+      </div>
+    </td>
+  `;
+  tbody.appendChild(tr);
+  setupDragEvents(tr);
+  recalculate();
+}
+
+function copyPreviousMonth(){
+  const target = Number(document.getElementById("copyTargetMonth")?.value);
+  if(!Number.isInteger(target) || target < 1 || target > 11){
+    alert("コピー先の月を選択してください。");
+    return;
+  }
+  const fromMonth = months[target-1];
+  const toMonth = months[target];
+  if(!confirm(`${fromMonth}の本人支給額を${toMonth}へコピーしますか？\n${toMonth}に入力済みの金額は上書きされます。`)) return;
+
+  document.querySelectorAll("#employeeBody tr").forEach(tr=>{
+    const inputs = tr.querySelectorAll(".salary-input");
+    if(inputs[target-1] && inputs[target]){
+      inputs[target].value = inputs[target-1].value;
+    }
+  });
+  recalculate();
+}
+
+function removeEmployee(btn){
+  btn.closest("tr").remove();
+  recalculate();
+}
+
+function moveEmployee(btn, direction){
+  const tr = btn.closest("tr");
+  const tbody = tr.parentElement;
+  if(direction < 0){
+    const prev = tr.previousElementSibling;
+    if(prev) tbody.insertBefore(tr, prev);
+  }else{
+    const next = tr.nextElementSibling;
+    if(next) tbody.insertBefore(next, tr);
+  }
+  recalculate();
+}
+
+let draggedRow = null;
+
+function setupDragEvents(tr){
+  tr.addEventListener("dragstart", (e)=>{
+    draggedRow = tr;
+    tr.classList.add("dragging");
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", tr.dataset.id || "");
+  });
+
+  tr.addEventListener("dragend", ()=>{
+    tr.classList.remove("dragging");
+    document.querySelectorAll("#employeeBody tr").forEach(r=>r.classList.remove("drag-over"));
+    draggedRow = null;
+    recalculate();
+  });
+
+  tr.addEventListener("dragover", (e)=>{
+    e.preventDefault();
+    if(!draggedRow || draggedRow === tr) return;
+    tr.classList.add("drag-over");
+    e.dataTransfer.dropEffect = "move";
+  });
+
+  tr.addEventListener("dragleave", ()=>{
+    tr.classList.remove("drag-over");
+  });
+
+  tr.addEventListener("drop", (e)=>{
+    e.preventDefault();
+    tr.classList.remove("drag-over");
+    if(!draggedRow || draggedRow === tr) return;
+
+    const rect = tr.getBoundingClientRect();
+    const insertAfter = e.clientY > rect.top + rect.height / 2;
+    const tbody = tr.parentElement;
+    if(insertAfter){
+      tbody.insertBefore(draggedRow, tr.nextElementSibling);
+    }else{
+      tbody.insertBefore(draggedRow, tr);
+    }
+    recalculate();
+  });
+}
+
+function recalculate(){
+  const rate = (Number(String(document.getElementById("benefitRate").value).replace(/,/g,''))||0)/100;
+  document.getElementById("rateLabel").textContent = (rate*100).toFixed(1) + "%";
+
+  const incomeByService = {};
+  let grandIncome = 0;
+  services.forEach((s,si)=>{
+    let total = 0;
+    document.querySelectorAll(`.income-input[data-service="${s.key}"]`).forEach(i=> total += parseAmount(i.value));
+    incomeByService[s.key] = total;
+    grandIncome += total;
+    document.getElementById(`income-total-${si}`).textContent = yen(total);
+  });
+  document.getElementById("grandIncome").textContent = yen(grandIncome);
+
+  const salaryByService = {};
+  const benefitsByService = {};
+  const costByService = {};
+  services.forEach(s=>{
+    salaryByService[s.key]=0;
+    benefitsByService[s.key]=0;
+    costByService[s.key]=0;
+  });
+
+  let totalSalary = 0, totalBenefits = 0, totalCost = 0;
+  document.querySelectorAll("#employeeBody tr").forEach(tr=>{
+    const service = tr.querySelector(".emp-service").value;
+    let salary = 0;
+    tr.querySelectorAll(".salary-input").forEach(i=>salary += parseAmount(i.value));
+    const benefits = salary * rate;
+    const cost = salary + benefits;
+
+    tr.querySelector(".emp-salary-total").textContent = yen(salary);
+    tr.querySelector(".emp-benefit-total").textContent = yen(benefits);
+    tr.querySelector(".emp-cost-total").textContent = yen(cost);
+
+    salaryByService[service] += salary;
+    benefitsByService[service] += benefits;
+    costByService[service] += cost;
+    totalSalary += salary;
+    totalBenefits += benefits;
+    totalCost += cost;
+  });
+
+  document.getElementById("totalSalary").textContent = yen(totalSalary);
+  document.getElementById("totalBenefits").textContent = yen(totalBenefits);
+  document.getElementById("totalCost").textContent = yen(totalCost);
+
+  const diffBody = document.getElementById("differenceBody");
+  diffBody.innerHTML = "";
+  services.forEach(s=>{
+    const balance = incomeByService[s.key] - costByService[s.key];
+    const useRate = incomeByService[s.key] ? (costByService[s.key]/incomeByService[s.key]*100) : 0;
+    const tr = document.createElement("tr");
+    tr.className = s.cls;
+    tr.innerHTML = `
+      <td class="label">${s.key}</td>
+      <td class="money">${yen(incomeByService[s.key])}</td>
+      <td class="money">${yen(salaryByService[s.key])}</td>
+      <td class="money">${yen(benefitsByService[s.key])}</td>
+      <td class="money">${yen(costByService[s.key])}</td>
+      <td><input type="text" inputmode="numeric" class="actual-report-input money-entry"
+        data-service="${s.key}" value="${formatAmount(actualReportByService[s.key])}"
+        placeholder="入力" oninput="updateActualReport(this)"></td>
+      <td class="money ${balance>=0?"positive":"negative"}">${yen(balance)}</td>
+      <td>${useRate.toFixed(1)}%</td>
+    `;
+    diffBody.appendChild(tr);
+  });
+
+  const totalActualReport = services.reduce((sum,s)=>sum + parseAmount(actualReportByService[s.key]),0);
+  const costMinusActual = totalCost - totalActualReport;
+  const balance = grandIncome-totalCost;
+  const rateUsed = grandIncome ? totalCost/grandIncome*100 : 0;
+  document.getElementById("diffIncome").textContent = yen(grandIncome);
+  document.getElementById("diffSalary").textContent = yen(totalSalary);
+  document.getElementById("diffBenefits").textContent = yen(totalBenefits);
+  document.getElementById("diffCost").textContent = yen(totalCost);
+  document.getElementById("diffActualReport").textContent = yen(totalActualReport);
+  document.getElementById("diffBalance").textContent = yen(balance);
+  document.getElementById("diffBalance").className = "money " + (balance>=0?"positive":"negative");
+  document.getElementById("diffRate").textContent = rateUsed.toFixed(1) + "%";
+
+  document.getElementById("sumIncome").textContent = yen(grandIncome);
+  document.getElementById("sumSalary").textContent = yen(totalSalary);
+  document.getElementById("sumBenefits").textContent = yen(totalBenefits);
+  document.getElementById("sumActualReport").textContent = yen(totalActualReport);
+  document.getElementById("sumCostMinusActual").textContent = yen(costMinusActual);
+  document.getElementById("sumCostMinusActual").style.color = costMinusActual>=0 ? "#b42318" : "#156b2f";
+  document.getElementById("sumBalance").textContent = yen(balance);
+  document.getElementById("sumBalance").style.color = balance>=0 ? "#156b2f" : "#b42318";
+}
+
+function collectData(){
+  const income = {};
+  services.forEach(s=>{
+    income[s.key] = Array.from(document.querySelectorAll(`.income-input[data-service="${s.key}"]`)).map(i=>parseAmount(i.value));
+  });
+  const employees = Array.from(document.querySelectorAll("#employeeBody tr")).map(tr=>({
+    name:tr.querySelector(".emp-name").value,
+    service:tr.querySelector(".emp-service").value,
+    type:tr.querySelector(".emp-type").value,
+    months:Array.from(tr.querySelectorAll(".salary-input")).map(i=>parseAmount(i.value))
+  }));
+  return {
+    year:Number(String(document.getElementById("year").value).replace(/,/g,''))||2026,
+    benefitRate:Number(document.getElementById("benefitRate").value)||16.5,
+    income,
+    employees,
+    actualReports:{...actualReportByService}
+  };
+}
+
+function saveData(){
+  localStorage.setItem("treatmentImprovementBudget", JSON.stringify(collectData()));
+  alert("ブラウザに保存しました。");
+}
+
+function loadData(){
+  const raw = localStorage.getItem("treatmentImprovementBudget");
+  if(!raw){ alert("保存データがありません。"); return; }
+  const data = JSON.parse(raw);
+  document.getElementById("year").value = data.year ?? 2026;
+  document.getElementById("benefitRate").value = data.benefitRate ?? 16.5;
+
+  services.forEach(s=>{
+    actualReportByService[s.key] = parseAmount(data.actualReports?.[s.key] ?? 0);
+  });
+
+  services.forEach(s=>{
+    const inputs = document.querySelectorAll(`.income-input[data-service="${s.key}"]`);
+    inputs.forEach((i,idx)=>i.value = formatAmount(data.income?.[s.key]?.[idx] ?? 0) || "0");
+  });
+
+  document.getElementById("employeeBody").innerHTML = "";
+  (data.employees||[]).forEach(e=>addEmployee(e));
+  if(!(data.employees||[]).length) addEmployee();
+  recalculate();
+}
+
+function resetAll(){
+  if(!confirm("入力内容をすべて初期化しますか？")) return;
+  localStorage.removeItem("treatmentImprovementBudget");
+  services.forEach(s=>actualReportByService[s.key]=0);
+  buildIncomeTable();
+  document.getElementById("employeeBody").innerHTML = "";
+  addEmployee();
+  recalculate();
+}
+
+function exportCSV(){
+  const data = collectData();
+  const rows = [];
+  rows.push(["処遇改善加算 予算管理表"]);
+  rows.push(["対象年度",data.year]);
+  rows.push(["法定福利費率",data.benefitRate+"%"]);
+  rows.push([]);
+  rows.push(["サービス別加算取得額",...months,"年間合計"]);
+  services.forEach(s=>{
+    const vals=data.income[s.key];
+    rows.push([s.key,...vals,vals.reduce((a,b)=>a+b,0)]);
+  });
+  rows.push([]);
+  rows.push(["職員名","所属サービス","職員区分",...months,"年間支給額","法定福利費","総支給コスト"]);
+  data.employees.forEach(e=>{
+    const salary=e.months.reduce((a,b)=>a+b,0);
+    const benefits=salary*data.benefitRate/100;
+    rows.push([e.name,e.service,e.type ?? "",...e.months,Math.round(salary),Math.round(benefits),Math.round(salary+benefits)]);
+  });
+  const csv = "\uFEFF" + rows.map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\r\n");
+  const blob = new Blob([csv],{type:"text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download=`処遇改善加算予算表_${data.year}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+buildIncomeTable();
+addEmployee();
+recalculate();
+
+
+</script>
+</body>
+</html>
